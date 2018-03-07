@@ -1,3 +1,11 @@
 <resources>
     <string name="app_name">DemoApp</string>
+    <string name="app_title">MD2K DataKit Demo App</string>
+    <string name="connect_button">Connect</string>
+    <string name="register_button">Register</string>
+    <string name="insert_button">Insert</string>
+    <string name="subscribe_button">Subscribe</string>
+    <string name="query_button">Query</string>
+    <string name="title_activity_connect_data_kit">ConnectDataKit</string>
+    <string name="connecting">Connecting to DataKitAPI</string>
 </resources>
