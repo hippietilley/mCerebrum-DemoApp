@@ -7,85 +7,85 @@
     tools:context="org.md2k.demoapp.MainActivity">
 
     <TextView
-        android:id="@+id/textView"
+        android:id="@+id/titleTextView"
         android:layout_width="329dp"
         android:layout_height="38dp"
         android:fontFamily="sans-serif"
-        android:hint="@string/app_title"
+        android:text="@string/app_title"
         android:textAlignment="center"
         android:textAppearance="@style/TextAppearance.AppCompat.Headline"
         android:textSize="24sp"
         android:textStyle="bold"
         android:typeface="normal"
-        app:layout_constraintBottom_toTopOf="@+id/button"
+        app:layout_constraintBottom_toTopOf="@+id/conButton"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintHorizontal_bias="0.5"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
     <Button
-        android:id="@+id/button"
+        android:id="@+id/conButton"
         android:layout_width="328dp"
         android:layout_height="wrap_content"
-        android:hint="@string/connect_button"
         android:onClick="connectButton"
-        app:layout_constraintBottom_toTopOf="@+id/button2"
+        android:text="@string/connect_button"
+        app:layout_constraintBottom_toTopOf="@+id/regButton"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintHorizontal_bias="0.5"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/textView"
+        app:layout_constraintTop_toBottomOf="@+id/titleTextView"
         app:layout_constraintVertical_bias="0.232" />
 
     <Button
-        android:id="@+id/button2"
+        android:id="@+id/regButton"
         android:layout_width="328dp"
         android:layout_height="wrap_content"
-        android:hint="@string/register_button"
         android:onClick="registerButton"
-        app:layout_constraintBottom_toTopOf="@+id/button3"
+        android:text="@string/register_button"
+        app:layout_constraintBottom_toTopOf="@+id/subButton"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintHorizontal_bias="0.5"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/button"
+        app:layout_constraintTop_toBottomOf="@+id/conButton"
         app:layout_constraintVertical_bias="0.232" />
 
     <Button
-        android:id="@+id/button3"
+        android:id="@+id/subButton"
         android:layout_width="328dp"
         android:layout_height="wrap_content"
-        android:hint="@string/insert_button"
-        android:onClick="insertButton"
-        app:layout_constraintBottom_toTopOf="@+id/button4"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.5"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/button2"
-        app:layout_constraintVertical_bias="0.215" />
-
-    <Button
-        android:id="@+id/button4"
-        android:layout_width="328dp"
-        android:layout_height="wrap_content"
-        android:hint="@string/subscribe_button"
         android:onClick="subscribeButton"
-        app:layout_constraintBottom_toTopOf="@+id/button5"
+        android:text="@string/subscribe_button"
+        app:layout_constraintBottom_toTopOf="@+id/insButton"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintHorizontal_bias="0.5"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/button3"
+        app:layout_constraintTop_toBottomOf="@+id/regButton"
         app:layout_constraintVertical_bias="0.215" />
 
     <Button
-        android:id="@+id/button5"
+        android:id="@+id/insButton"
         android:layout_width="328dp"
         android:layout_height="wrap_content"
-        android:hint="@string/query_button"
+        android:onClick="insertButton"
+        android:text="@string/insert_button"
+        app:layout_constraintBottom_toTopOf="@+id/queButton"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.5"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/subButton"
+        app:layout_constraintVertical_bias="0.215" />
+
+    <Button
+        android:id="@+id/queButton"
+        android:layout_width="328dp"
+        android:layout_height="wrap_content"
         android:onClick="queryButton"
+        android:text="@string/query_button"
         app:layout_constraintBottom_toTopOf="@+id/outputTextView"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintHorizontal_bias="0.5"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/button4" />
+        app:layout_constraintTop_toBottomOf="@+id/insButton" />
 
     <TextView
         android:id="@+id/outputTextView"
@@ -98,5 +98,5 @@
         app:layout_constraintHorizontal_bias="0.5"
         app:layout_constraintLeft_toLeftOf="parent"
         app:layout_constraintRight_toRightOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/button5" />
+        app:layout_constraintTop_toBottomOf="@+id/queButton" />
 </android.support.constraint.ConstraintLayout>

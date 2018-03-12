@@ -3,9 +3,7 @@
   <component name="ProjectModuleManager">
     <modules>
       <module fileurl="file://$PROJECT_DIR$/app/app.iml" filepath="$PROJECT_DIR$/app/app.iml" />
-      <module fileurl="file://$PROJECT_DIR$/app/app.iml" filepath="$PROJECT_DIR$/app/app.iml" />
       <module fileurl="file://$PROJECT_DIR$/../mCerebrum-DataKitAPI/datakitapi/datakitapi.iml" filepath="$PROJECT_DIR$/../mCerebrum-DataKitAPI/datakitapi/datakitapi.iml" />
-      <module fileurl="file://$PROJECT_DIR$/mCerebrum-DemoApp.iml" filepath="$PROJECT_DIR$/mCerebrum-DemoApp.iml" />
       <module fileurl="file://$PROJECT_DIR$/mCerebrum-DemoApp.iml" filepath="$PROJECT_DIR$/mCerebrum-DemoApp.iml" />
     </modules>
   </component>
