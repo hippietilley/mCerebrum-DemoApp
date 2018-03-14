@@ -28,12 +28,10 @@
 package org.md2k.demoapp;
 
 // Android imports
-import android.content.Context;
-import android.content.Intent;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
+import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
-import android.provider.ContactsContract;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.view.View;
@@ -41,7 +39,6 @@ import android.widget.TextView;
 
 // Java imports
 import java.util.ArrayList;
-import java.util.Random;
 
 // DataKitAPI imports
 import org.md2k.datakitapi.DataKitAPI;
@@ -58,99 +55,103 @@ import org.md2k.datakitapi.source.datasource.DataSourceClient;
 import org.md2k.datakitapi.source.datasource.DataSourceType;
 import org.md2k.datakitapi.time.DateTime;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity implements SensorEventListener {
 
     // Variables for accelerometer data
-    private SensorManager mSensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
+    private SensorManager mSensorManager;
     private Sensor mSensor = null;
     long lastSaved;
     double minSampleTime = 100; // 100 milliseconds
     public static final double GRAVITY = 9.81;
+    boolean hasData = false;
+    SensorEvent sensorEvent;
 
     // Variables for DataKit objects
     DataKitAPI datakitapi;
     DataSourceClient dataSourceClientRegister = null;
-    DataTypeInt dataTypeIntInsert = null;
+    DataTypeDoubleArray dataInsert = null;
     DataSourceClient dataSourceClientSubscribe = null;
-    DataTypeInt dataTypeIntSubscribe = null;
-    ArrayList<DataType> dataTypeIntQuery = null;
+    DataTypeDoubleArray dataTypeSubscribe = null;
+    ArrayList<DataType> dataTypeQuery = null;
 
-    Context context;
+    // Variables for the user view
+    TextView conButton;
+    TextView regButton;
+    TextView subButton;
+    TextView insButton;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        conButton = findViewById(R.id.conButton);
+        regButton = findViewById(R.id.regButton);
+        subButton = findViewById(R.id.subButton);
+        insButton = findViewById(R.id.insButton);
 
         mSensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);
+        mSensor = mSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
         lastSaved = DateTime.getDateTime();
     }
 
-    @Override
-    public void onSensorChanged(SensorEvent event) {
-        if (event.sensor.getType() == Sensor.TYPE_ACCELEROMETER) {
-        }
-    }
-
     public void connectButton (View view){
-        final TextView conButton = findViewById(R.id.conButton);
         datakitapi = datakitapi.getInstance(this);
         try {
             if (datakitapi.isConnected()) {
                 datakitapi.disconnect();
                 dataSourceClientRegister = null;
-                dataTypeIntInsert = null;
+                dataInsert = null;
                 dataSourceClientSubscribe = null;
-                dataTypeIntSubscribe = null;
-                dataTypeIntQuery = null;
+                dataTypeSubscribe = null;
+                dataTypeQuery = null;
                 printMessage("DataKit disconnected");
                 conButton.setText(R.string.connect_button);
-            } else {
+            } else
                 datakitapi.connect(new OnConnectionListener() {
-                    @Override
-                    public void onConnected() {
-                        printMessage("DataKit connected");
-                    }
-                });
-                conButton.setText(R.string.disconnect_button);
-            }
+                @Override
+                public void onConnected() {
+                    printMessage("DataKit connected");
+                    conButton.setText(R.string.disconnect_button);
+                }
+            });
         } catch (DataKitException ignored) {}
     }
 
     public void registerButton (View view){
-        TextView regButton = findViewById(R.id.regButton);
         datakitapi = datakitapi.getInstance(this);
         try {
-            if (dataSourceClientRegister == null) {
+            if (!(datakitapi.isConnected())) {
+                printMessage("DataKit is not connected");
+            }
+            else if (dataSourceClientRegister == null) {
                 DataSourceBuilder dataSourceBuilder =
-                        new DataSourceBuilder().setType(DataSourceType.STATUS);
+                        new DataSourceBuilder().setType(DataSourceType.ACCELEROMETER);
                 dataSourceClientRegister = datakitapi.register(dataSourceBuilder);
+                regButton.setText(R.string.unregister_button);
+                printMessage(dataSourceClientRegister.getDataSource().getType() + " registration successful");
             } else {
+                //mSensorManager.unregisterListener(this, mSensor);
                 datakitapi.unregister(dataSourceClientRegister);
                 dataSourceClientRegister = null;
                 regButton.setText(R.string.register_button);
-                printMessage("Accelerometer unregistered");
+                printMessage("DataSource unregistered");
             }
         } catch (DataKitException ignored) {
+            mSensorManager.unregisterListener(this, mSensor);
             dataSourceClientRegister = null;
             regButton.setText(R.string.register_button);
-            printMessage("Accelerometer registration failed");
-        }
-        if (dataSourceClientRegister != null) {
-            regButton.setText(R.string.unregister_button);
-            printMessage("Accelerometer registration successful");
+            printMessage(dataSourceClientRegister.getDataSource().getType() + " registration failed");
         }
     }
 
     public void subscribeButton (View view){
-        TextView subButton = findViewById(R.id.subButton);
         datakitapi = datakitapi.getInstance(this);
         try {
             if (dataSourceClientSubscribe == null) {
                 Application application =
                         new ApplicationBuilder().setId(MainActivity.this.getPackageName()).build();
                 DataSourceBuilder dataSourceBuilder =
-                        new DataSourceBuilder().setType(DataSourceType.STATUS).setApplication(application);
+                        new DataSourceBuilder().setType(DataSourceType.ACCELEROMETER).setApplication(application);
                 ArrayList<DataSourceClient> dataSourceClients = datakitapi.find(dataSourceBuilder);
                 if(dataSourceClients.size() == 0) {
                     printMessage("DataSource not registered yet");
@@ -159,8 +160,8 @@ public class MainActivity extends AppCompatActivity {
                     datakitapi.subscribe(dataSourceClientSubscribe, new OnReceiveListener() {
                         @Override
                         public void onReceived(DataType dataType) {
-                            dataTypeIntSubscribe = (DataTypeInt) dataType;
-                            printMessage(dataTypeIntSubscribe.toString());
+                            dataTypeSubscribe = (DataTypeDoubleArray) dataType;
+                            printMessage(dataTypeSubscribe.toString());
                         }
                     });
                     subButton.setText(R.string.unsubscribe_button);
@@ -169,36 +170,24 @@ public class MainActivity extends AppCompatActivity {
             } else {
                 datakitapi.unsubscribe(dataSourceClientSubscribe);
                 dataSourceClientSubscribe = null;
-                dataTypeIntSubscribe = null;
+                dataTypeSubscribe = null;
                 subButton.setText(R.string.subscribe_button);
                 printMessage("DataSource unsubscribed");
             }
         } catch (DataKitException ignored) {
             subButton.setText(R.string.subscribe_button);
             dataSourceClientSubscribe = null;
-            dataTypeIntSubscribe = null;
+            dataTypeSubscribe = null;
         }
     }
 
     public void insertButton (View view){
         datakitapi = datakitapi.getInstance(this);
-        try {
-            if(dataSourceClientRegister != null) {
-                if (mSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER) != null) {
-                    Accelerometer mAccel = new Accelerometer(this);
 
-                } else {
-                    dataTypeIntInsert = new DataTypeInt(DateTime.getDateTime(),
-                            Math.abs(new Random().nextInt() % 10000));
-                    datakitapi.insert(dataSourceClientRegister, dataTypeIntInsert);
-                }
-                printMessage("Insertion successful");
-            } else {
-                printMessage("DataSource not registered yet.");
-            }
-        } catch (DataKitException ignored) {
-            dataTypeIntInsert = null;
-            printMessage("Insertion failed");
+        if(dataSourceClientRegister != null) {
+            mSensorManager.registerListener(this, mSensor, SensorManager.SENSOR_DELAY_FASTEST);
+        } else {
+            printMessage("DataSource not registered yet.");
         }
     }
 
@@ -218,22 +207,25 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    @Override
+    public void onAccuracyChanged(Sensor sensor, int x) {}
+
     public void queryButton (View view){
         datakitapi = datakitapi.getInstance(this);
         try {
             Application application =
                     new ApplicationBuilder().setId(MainActivity.this.getPackageName()).build();
             DataSourceBuilder dataSourceBuilder =
-                    new DataSourceBuilder().setType(DataSourceType.STATUS).setApplication(application);
+                    new DataSourceBuilder().setType(DataSourceType.ACCELEROMETER).setApplication(application);
             ArrayList<DataSourceClient> dataSourceClients = datakitapi.find(dataSourceBuilder);
             if(dataSourceClients.size() == 0) {
                 printMessage("DataSource not registered yet.");
             } else {
-                dataTypeIntQuery = datakitapi.query(dataSourceClients.get(0), 3);
-                printMessage(dataTypeIntQuery.toString());
+                dataTypeQuery = datakitapi.query(dataSourceClients.get(0), 3);
+                printMessage(dataTypeQuery.toString());
             }
         } catch (DataKitException ignored) {
-            dataTypeIntQuery = null;
+            dataTypeQuery = null;
         }
     }
 

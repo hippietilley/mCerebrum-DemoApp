@@ -6,6 +6,7 @@
     <string name="register_button">Register</string>
     <string name="unregister_button">Unregister</string>
     <string name="insert_button">Insert</string>
+    <string name="stop_insert_button">Stop Inserting Data</string>
     <string name="subscribe_button">Subscribe</string>
     <string name="unsubscribe_button">Unsubscribe</string>
     <string name="query_button">Query</string>
