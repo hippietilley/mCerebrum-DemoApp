@@ -68,12 +68,24 @@
         android:layout_height="wrap_content"
         android:onClick="insertButton"
         android:text="@string/insert_button"
-        app:layout_constraintBottom_toTopOf="@+id/queButton"
+        app:layout_constraintBottom_toTopOf="@+id/insertTextView"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintHorizontal_bias="0.5"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/subButton"
         app:layout_constraintVertical_bias="0.215" />
+
+    <TextView
+        android:id="@+id/insertTextView"
+        android:layout_width="329dp"
+        android:layout_height="70dp"
+        android:textAlignment="center"
+        android:textAppearance="@android:style/TextAppearance.DeviceDefault"
+        app:layout_constraintBottom_toTopOf="@+id/queButton"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.5"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/insButton" />
 
     <Button
         android:id="@+id/queButton"
@@ -90,8 +102,8 @@
     <TextView
         android:id="@+id/outputTextView"
         android:layout_width="328dp"
-        android:layout_height="34dp"
-        android:layout_marginBottom="16dp"
+        android:layout_height="131dp"
+        android:layout_marginBottom="8dp"
         android:textAlignment="center"
         android:textAppearance="@android:style/TextAppearance.DeviceDefault"
         app:layout_constraintBottom_toBottomOf="parent"
