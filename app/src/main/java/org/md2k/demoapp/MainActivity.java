@@ -34,6 +34,7 @@ import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.widget.TextView;
 
@@ -44,7 +45,6 @@ import java.util.ArrayList;
 import org.md2k.datakitapi.DataKitAPI;
 import org.md2k.datakitapi.datatype.DataType;
 import org.md2k.datakitapi.datatype.DataTypeDoubleArray;
-import org.md2k.datakitapi.datatype.DataTypeInt;
 import org.md2k.datakitapi.exception.DataKitException;
 import org.md2k.datakitapi.messagehandler.OnConnectionListener;
 import org.md2k.datakitapi.messagehandler.OnReceiveListener;
@@ -63,8 +63,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     long lastSaved;
     double minSampleTime = 100; // 100 milliseconds
     public static final double GRAVITY = 9.81;
-    boolean hasData = false;
-    SensorEvent sensorEvent;
+    DataTypeDoubleArray dataTypeDoubleArray;
 
     // Variables for DataKit objects
     DataKitAPI datakitapi;
@@ -130,7 +129,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 regButton.setText(R.string.unregister_button);
                 printMessage(dataSourceClientRegister.getDataSource().getType() + " registration successful");
             } else {
-                //mSensorManager.unregisterListener(this, mSensor);
+                mSensorManager.unregisterListener(this, mSensor);
                 datakitapi.unregister(dataSourceClientRegister);
                 dataSourceClientRegister = null;
                 regButton.setText(R.string.register_button);
@@ -161,7 +160,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                         @Override
                         public void onReceived(DataType dataType) {
                             dataTypeSubscribe = (DataTypeDoubleArray) dataType;
-                            printMessage(dataTypeSubscribe.toString());
+                            printMessage(dataTypeSubscribe.getSample().toString());
                         }
                     });
                     subButton.setText(R.string.unsubscribe_button);
@@ -200,10 +199,18 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             samples[0] = event.values[0] / GRAVITY; // X axis
             samples[1] = event.values[1] / GRAVITY; // Y axis
             samples[2] = event.values[2] / GRAVITY; // Z axis
-            DataTypeDoubleArray dataTypeDoubleArray = new DataTypeDoubleArray(curTime, samples);
-            try {
-                datakitapi.insertHighFrequency(dataSourceClientRegister, dataTypeDoubleArray);
-            } catch (DataKitException ignored) {}
+            dataTypeDoubleArray = new DataTypeDoubleArray(curTime, samples);
+            insertData(dataTypeDoubleArray);
+        }
+    }
+
+    public void insertData(DataType data) {
+        try {
+            datakitapi.insert(dataSourceClientRegister, data);
+            mSensorManager.unregisterListener(this, mSensor);
+        } catch (DataKitException ignored){
+            printMessage("Danger, Will Robinson!");
+            Log.e("database insert", ignored.getMessage());
         }
     }
 
