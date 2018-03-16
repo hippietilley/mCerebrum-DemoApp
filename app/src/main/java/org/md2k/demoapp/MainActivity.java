@@ -60,26 +60,26 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     // Variables for accelerometer data
     private SensorManager mSensorManager;
     private Sensor mSensor = null;
-    long lastSaved;
-    double minSampleTime = 100; // 100 milliseconds
+    private long lastSaved;
+    private double minSampleTime = 100; // 100 milliseconds
     public static final double GRAVITY = 9.81;
 
     // Variables for DataKit objects
-    DataKitAPI datakitapi;
-    DataSourceClient dataSourceClientRegister = null;
-    DataTypeDoubleArray dataInsert = null;
-    DataSourceClient dataSourceClientSubscribe = null;
-    DataTypeDoubleArray dataTypeSubscribe = null;
-    ArrayList<DataType> dataTypeQuery = null;
-    DataTypeDoubleArray dataTypeDoubleArray;
+    private DataKitAPI datakitapi;
+    private DataSourceClient dataSourceClientRegister = null;
+    private DataTypeDoubleArray dataInsert = null;
+    private DataSourceClient dataSourceClientSubscribe = null;
+    private DataTypeDoubleArray dataTypeSubscribe = null;
+    private ArrayList<DataType> dataTypeQuery = null;
+    private DataTypeDoubleArray dataTypeDoubleArray;
 
     // Variables for the user view
-    TextView conButton;
-    TextView regButton;
-    TextView subButton;
-    TextView insButton;
-    TextView output;
-    TextView insOutput;
+    private TextView conButton;
+    private TextView regButton;
+    private TextView subButton;
+    private TextView insButton;
+    private TextView output;
+    private TextView insOutput;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -240,7 +240,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 printMessage("DataSource not registered yet.", output);
             } else {
                 dataTypeQuery = datakitapi.query(dataSourceClients.get(0), 3);
-                String message = "";
+                String message = "[X axis, Y axis, Z axis]\n";
                 for (DataType data : dataTypeQuery) {
                     if (data instanceof DataTypeDoubleArray) {
                         DataTypeDoubleArray dataArray = (DataTypeDoubleArray)data;
