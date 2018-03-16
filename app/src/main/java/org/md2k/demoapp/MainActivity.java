@@ -160,7 +160,8 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                         @Override
                         public void onReceived(DataType dataType) {
                             dataTypeSubscribe = (DataTypeDoubleArray) dataType;
-                            printMessage(dataTypeSubscribe.getSample().toString());
+                            double[] sample = dataTypeSubscribe.getSample();
+                            printMessage("[" + sample[0] + ", " + sample[1] + ", " + sample[2] + "]");
                         }
                     });
                     subButton.setText(R.string.unsubscribe_button);
@@ -207,9 +208,9 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     public void insertData(DataType data) {
         try {
             datakitapi.insert(dataSourceClientRegister, data);
+            //printMessage(data.toString());
             mSensorManager.unregisterListener(this, mSensor);
         } catch (DataKitException ignored){
-            printMessage("Danger, Will Robinson!");
             Log.e("database insert", ignored.getMessage());
         }
     }
@@ -228,8 +229,14 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             if(dataSourceClients.size() == 0) {
                 printMessage("DataSource not registered yet.");
             } else {
-                dataTypeQuery = datakitapi.query(dataSourceClients.get(0), 3);
-                printMessage(dataTypeQuery.toString());
+                dataTypeQuery = datakitapi.query(dataSourceClients.get(0), 1);
+                for (DataType data : dataTypeQuery) {
+                    if (data instanceof DataTypeDoubleArray) {
+                        DataTypeDoubleArray dataArray = (DataTypeDoubleArray)data;
+                        double[] sample = dataArray.getSample();
+                        printMessage("[" + sample[0] + ", " + sample[1] + ", " + sample[2] + "]");
+                    }
+                }
             }
         } catch (DataKitException ignored) {
             dataTypeQuery = null;
