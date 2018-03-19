@@ -36,7 +36,10 @@ import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
+import android.widget.CompoundButton;
+import android.widget.Switch;
 import android.widget.TextView;
+import android.widget.ToggleButton;
 
 // Java imports
 import java.util.ArrayList;
@@ -50,7 +53,6 @@ import org.md2k.datakitapi.messagehandler.OnConnectionListener;
 import org.md2k.datakitapi.messagehandler.OnReceiveListener;
 import org.md2k.datakitapi.source.application.Application;
 import org.md2k.datakitapi.source.application.ApplicationBuilder;
-import org.md2k.datakitapi.source.datasource.DataSource;
 import org.md2k.datakitapi.source.datasource.DataSourceBuilder;
 import org.md2k.datakitapi.source.datasource.DataSourceClient;
 import org.md2k.datakitapi.source.datasource.DataSourceType;
@@ -68,11 +70,11 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     // Variables for DataKit objects
     private DataKitAPI datakitapi;
     private DataSourceClient dataSourceClientRegister = null;
-    private DataTypeDoubleArray dataInsert = null;
     private DataSourceClient dataSourceClientSubscribe = null;
     private DataTypeDoubleArray dataTypeSubscribe = null;
     private ArrayList<DataType> dataTypeQuery = null;
     private DataTypeDoubleArray dataTypeDoubleArray;
+    private Boolean isHF;
 
     // Variables for the user view
     private TextView conButton;
@@ -81,6 +83,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private TextView insButton;
     private TextView output;
     private TextView insOutput;
+    private ToggleButton hfSwitch;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -94,7 +97,9 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         insButton = findViewById(R.id.insButton);
         output = findViewById(R.id.outputTextView);
         insOutput = findViewById(R.id.insertTextView);
-
+        hfSwitch = findViewById(R.id.hfSwitch);
+        setHFSwitch();
+        printMessage(isHF.toString(), output);
 
         // Gets sensor service
         mSensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);
@@ -102,6 +107,8 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         // Sets the desired sensor
         mSensor = mSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
         lastSaved = DateTime.getDateTime();
+
+        datakitapi = datakitapi.getInstance(this);
     }
 
     public Application buildApplication() {
@@ -116,8 +123,25 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         return new DataSourceBuilder().setType(DataSourceType.ACCELEROMETER);
     }
 
+    public void setHFSwitch(View view) {
+        hfSwitch.toggle();
+        printMessage(isHF.toString(), output);
+    }
+
+    public void setHFSwitch() {
+        hfSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton compoundButton, boolean b) {
+                if (b)
+                    isHF = true;
+                else
+                    isHF = false;
+                printMessage(isHF.toString(), output);
+            }
+        });
+    }
+
     public void connectButton(View view) {
-        datakitapi = datakitapi.getInstance(this);
         try {
             if (datakitapi.isConnected()) {
                 disconnectDataKit();
@@ -125,7 +149,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 datakitapi.connect(new OnConnectionListener() {
                 @Override
                 public void onConnected() {
-                    printMessage("DataKit connected", output);
+                    printMessage(R.string.dataKitConnected, output);
                     conButton.setText(R.string.disconnect_button);
                 }
             });
@@ -133,22 +157,21 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     }
 
     public void disconnectDataKit() {
-        unregisterListener();
+        unsubscribeDataSource();
+        unregisterButton(false);
         datakitapi.disconnect();
         dataSourceClientRegister = null;
-        dataInsert = null;
         dataSourceClientSubscribe = null;
         dataTypeSubscribe = null;
         dataTypeQuery = null;
-        printMessage("DataKit disconnected", output);
+        printMessage(R.string.dataKitDisconnected, output);
         conButton.setText(R.string.connect_button);
     }
 
     public void registerButton(View view) {
-        datakitapi = datakitapi.getInstance(this);
         try {
             if (!(datakitapi.isConnected())) {
-                printMessage("DataKit is not connected", output);
+                printMessage(R.string.errorNotConnected, output);
             }
             else if (dataSourceClientRegister == null) {
                 dataSourceClientRegister = datakitapi.register(buildDataSource());
@@ -156,19 +179,27 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 printMessage(dataSourceClientRegister.getDataSource().getType() +
                         " registration successful", output);
             } else {
-                unregisterListener();
-                datakitapi.unregister(dataSourceClientRegister);
-                dataSourceClientRegister = null;
-                regButton.setText(R.string.register_button);
-                printMessage("DataSource unregistered", output);
+                unregisterButton(false);
             }
         } catch (DataKitException ignored) {
+            unregisterButton(true);
+        }
+    }
+
+    public void unregisterButton(boolean failed) {
+        try {
             unregisterListener();
+            unsubscribeDataSource();
+            datakitapi.unregister(dataSourceClientRegister);
             dataSourceClientRegister = null;
             regButton.setText(R.string.register_button);
+
+        } catch (DataKitException ignored){}
+        if (failed)
             printMessage(dataSourceClientRegister.getDataSource().getType() +
                     " registration failed", output);
-        }
+        else
+            printMessage(R.string.dataSourceUnregistered, output);
     }
 
     public void unregisterListener() {
@@ -178,24 +209,18 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     }
 
     public void subscribeButton (View view){
-        datakitapi = datakitapi.getInstance(this);
+        ArrayList<DataSourceClient> dataSourceClients;
         try {
             if (dataSourceClientSubscribe == null) {
-                ArrayList<DataSourceClient> dataSourceClients = datakitapi.find(buildDataSource(buildApplication()));
+                dataSourceClients = datakitapi.find(buildDataSource(buildApplication()));
                 if(dataSourceClients.size() == 0) {
-                    printMessage("DataSource not registered yet", output);
+                    printMessage(R.string.errorNotRegistered, output);
                 } else {
                     dataSourceClientSubscribe = dataSourceClients.get(0);
-                    datakitapi.subscribe(dataSourceClientSubscribe, new OnReceiveListener() {
-                        @Override
-                        public void onReceived(DataType dataType) {
-                            dataTypeSubscribe = (DataTypeDoubleArray) dataType;
-                            double[] sample = dataTypeSubscribe.getSample();
-                            printMessage("[" + sample[0] + ", " + sample[1] + ", " + sample[2] + "]", output);
-                        }
-                    });
+                    // gets index 0 because there should only be one in this application
+                    datakitapi.subscribe(dataSourceClientSubscribe, subscribeListener);
                     subButton.setText(R.string.unsubscribe_button);
-                    printMessage("DataSource subscribed", output);
+                    printMessage(R.string.dataSourceSubscribed, output);
                 }
             } else {
                 unsubscribeDataSource();
@@ -207,23 +232,29 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         }
     }
 
+    public OnReceiveListener subscribeListener = new OnReceiveListener() {
+        @Override
+        public void onReceived(DataType dataType) {
+            printSample((DataTypeDoubleArray) dataType, output);
+        }
+    };
+
     public void unsubscribeDataSource() {
         try {
             datakitapi.unsubscribe(dataSourceClientSubscribe);
             dataSourceClientSubscribe = null;
             dataTypeSubscribe = null;
             subButton.setText(R.string.subscribe_button);
-            printMessage("DataSource unsubscribed", output);
+            printMessage(R.string.dataSourceUnsubscribed, output);
         } catch (DataKitException ignored) {}
     }
 
     public void insertButton (View view){
-        datakitapi = datakitapi.getInstance(this);
         if(dataSourceClientRegister != null) {
             mSensorManager.registerListener(this, mSensor, SensorManager.SENSOR_DELAY_NORMAL);
             insButton.setText(R.string.inserting);
         } else {
-            printMessage("DataSource not registered yet.", output);
+            printMessage(R.string.errorNotRegistered, output);
         }
     }
 
@@ -237,17 +268,28 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             samples[1] = event.values[1] / GRAVITY; // Y axis
             samples[2] = event.values[2] / GRAVITY; // Z axis
             dataTypeDoubleArray = new DataTypeDoubleArray(curTime, samples);
-            insertData(dataTypeDoubleArray);
+            if (isHF)
+                insertHFData(dataTypeDoubleArray);
+            else
+                insertData(dataTypeDoubleArray);
         }
     }
 
     public void insertData(DataTypeDoubleArray data) {
         try {
             datakitapi.insert(dataSourceClientRegister, data);
-            double[] sample = data.getSample();
-            printMessage("[" + sample[0] + ", " + sample[1] + ", " + sample[2] + "]", insOutput);
-        } catch (DataKitException ignored){
+            printSample(data, insOutput);
+        } catch (DataKitException ignored) {
             Log.e("database insert", ignored.getMessage());
+        }
+    }
+
+    public void insertHFData(DataTypeDoubleArray data) {
+        try {
+            datakitapi.insertHighFrequency(dataSourceClientRegister, data);
+            printSample(data, insOutput);
+        } catch (DataKitException ignored) {
+            Log.e("hf data insert", ignored.getMessage());
         }
     }
 
@@ -256,17 +298,20 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
     public void queryButton (View view){
         datakitapi = datakitapi.getInstance(this);
-        unsubscribeDataSource();
+        unsubscribeDataSource(); // Without this it was crashing
         try {
             ArrayList<DataSourceClient> dataSourceClients = datakitapi.find(buildDataSource(buildApplication()));
-
-            if(dataSourceClients.size() == 0) {
-                printMessage("DataSource not registered yet.", output);
+            if (dataSourceClients.size() == 0) {
+                printMessage(R.string.errorNotRegistered, output);
             } else {
                 dataTypeQuery = datakitapi.query(dataSourceClients.get(0), 3);
-                printQuery(dataTypeQuery);
+                if (dataTypeQuery.size() == 0) {
+                    printMessage("query size zero", output);
+                } else
+                    printQuery(dataTypeQuery);
             }
         } catch (DataKitException ignored) {
+            Log.e("query", ignored.getMessage());
             dataTypeQuery = null;
         }
     }
@@ -284,6 +329,14 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         printMessage(message.toString(), output);
     }
 
+    public void printSample(DataTypeDoubleArray data, TextView output) {
+        double[] sample = data.getSample();
+        printMessage("[" + sample[0] + ", " + sample[1] + ", " + sample[2] + "]", output);
+    }
+
+    public void printMessage (int message, TextView output) {
+        output.setText(message);
+    }
     public void printMessage (String message, TextView output) {
         output.setText(message);
     }
