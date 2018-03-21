@@ -28,6 +28,7 @@
 package org.md2k.demoapp;
 
 // Android imports
+import android.content.pm.ActivityInfo;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
@@ -36,6 +37,7 @@ import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
+import android.widget.Switch;
 import android.widget.TextView;
 
 // Java imports
@@ -45,6 +47,7 @@ import java.util.ArrayList;
 import org.md2k.datakitapi.DataKitAPI;
 import org.md2k.datakitapi.datatype.DataType;
 import org.md2k.datakitapi.datatype.DataTypeDoubleArray;
+import org.md2k.datakitapi.datatype.DataTypeLong;
 import org.md2k.datakitapi.exception.DataKitException;
 import org.md2k.datakitapi.messagehandler.OnConnectionListener;
 import org.md2k.datakitapi.messagehandler.OnReceiveListener;
@@ -55,6 +58,9 @@ import org.md2k.datakitapi.source.datasource.DataSourceClient;
 import org.md2k.datakitapi.source.datasource.DataSourceType;
 import org.md2k.datakitapi.time.DateTime;
 
+/**
+ * This application demonstrates how DataKit can be implemented and used.
+ */
 public class MainActivity extends AppCompatActivity implements SensorEventListener {
 
     // Variables for accelerometer data
@@ -66,12 +72,12 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
     // Variables for DataKit objects
     private DataKitAPI datakitapi;
-    private DataSourceClient dataSourceClientRegister = null;
-    private DataTypeDoubleArray dataInsert = null;
-    private DataSourceClient dataSourceClientSubscribe = null;
-    private DataTypeDoubleArray dataTypeSubscribe = null;
+    private DataSourceClient regDataSourceClient = null;
+    private DataSourceClient subDataSourceClient = null;
     private ArrayList<DataType> dataTypeQuery = null;
     private DataTypeDoubleArray dataTypeDoubleArray;
+    private DataTypeLong querySize;
+    private Boolean isHF;
 
     // Variables for the user view
     private TextView conButton;
@@ -80,10 +86,17 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private TextView insButton;
     private TextView output;
     private TextView insOutput;
+    private Switch hfSwitch;
 
+    /**
+     * Upon creation, the buttons, <code>SensorManager</code>, <code>Sensor</code>, and current datetime
+     * are initialized. An instance of DataKit is also retrieved/created.
+     * @param savedInstanceState Previous state of the application if available.
+     */
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
         setContentView(R.layout.activity_main);
 
         // Initializes button variables
@@ -93,7 +106,8 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         insButton = findViewById(R.id.insButton);
         output = findViewById(R.id.outputTextView);
         insOutput = findViewById(R.id.insertTextView);
-
+        hfSwitch = findViewById(R.id.hfSwitch);
+        isHF = hfSwitch.isChecked();
 
         // Gets sensor service
         mSensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);
@@ -101,105 +115,224 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         // Sets the desired sensor
         mSensor = mSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
         lastSaved = DateTime.getDateTime();
+
+        datakitapi = datakitapi.getInstance(this);
     }
 
-    public void connectButton (View view){
-        datakitapi = datakitapi.getInstance(this);
+    /**
+     * Builds a new application object. This object represents this application and helps
+     * identify data within the database.
+     * @return Application datatype
+     */
+    public Application buildApplication() {
+        return new ApplicationBuilder().setId(MainActivity.this.getPackageName()).build();
+    }
+
+    /**
+     * Builds a data source object representing the sensor and application creating the data source.
+     * This demo application only uses the accelerometer, but any available sensor, hardware or software
+     * based, can be used.
+     * @param application Application object representing this application.
+     * @return A data source builder
+     */
+    public DataSourceBuilder buildDataSource(Application application) {
+        return new DataSourceBuilder().setType(DataSourceType.ACCELEROMETER).setApplication(application);
+    }
+
+    /**
+     * Builds a data source object representing the sensor. In this application this is only used for
+     * registering the data source. It could be used to find all data sources of the set type independent
+     * from the application.
+     * @return A data source builder
+     */
+    public DataSourceBuilder buildDataSource() {
+        return new DataSourceBuilder().setType(DataSourceType.ACCELEROMETER);
+    }
+
+    /**
+     * Switch mechanism for switching between <code>insertData()</code> and <code>insertHFData</code>.
+     * This is not necessary in a typical application, but used to demonstrate the difference between
+     * these two data insert methods.
+     * @param view hfSwitch
+     */
+    public void setHFSwitch(View view) {
+        isHF = hfSwitch.isChecked();
+        printMessage(isHF.toString(), output);
+    }
+
+    /**
+     * Controls behavior of connecting and disconnecting from DataKit. DataKit must be connected before
+     * any other methods are called. Not doing so will result in <code>DataKitException</code>s which
+     * must be handled. <code>DataKitAPI.connect(new OnConnectionListener()</code> registers a callback
+     * interface so that this application and DataKit can communicate.
+     * @param view conButton
+     */
+    public void connectButton(View view) {
         try {
             if (datakitapi.isConnected()) {
-                unregisterListener();
-                datakitapi.disconnect();
-                dataSourceClientRegister = null;
-                dataInsert = null;
-                dataSourceClientSubscribe = null;
-                dataTypeSubscribe = null;
-                dataTypeQuery = null;
-                printMessage("DataKit disconnected", output);
-                conButton.setText(R.string.connect_button);
+                disconnectDataKit();
             } else
                 datakitapi.connect(new OnConnectionListener() {
                 @Override
                 public void onConnected() {
-                    printMessage("DataKit connected", output);
+                    printMessage(R.string.dataKitConnected, output);
                     conButton.setText(R.string.disconnect_button);
                 }
             });
         } catch (DataKitException ignored) {}
     }
 
-    public void registerButton (View view){
-        datakitapi = datakitapi.getInstance(this);
+    /**
+     * Before DataKit is disconnected, all data sources must be unsubscribed and unregistered.
+     * Exception checking is not required when calling <code>DataKitAPI.disconnect()</code>.
+     */
+    public void disconnectDataKit() {
+        unsubscribeDataSource();
+        unregisterButton(false);
+        datakitapi.disconnect();
+        regDataSourceClient = null;
+        subDataSourceClient = null;
+        dataTypeQuery = null;
+        printMessage(R.string.dataKitDisconnected, output);
+        conButton.setText(R.string.connect_button);
+    }
+
+    /**
+     * Registers the data source with DataKit. DataKit can not receive data from a data source until
+     * that data source is registered.
+     * @param view regButton
+     */
+    public void registerButton(View view) {
         try {
             if (!(datakitapi.isConnected())) {
-                printMessage("DataKit is not connected", output);
+                printMessage(R.string.errorNotConnected, output);
             }
-            else if (dataSourceClientRegister == null) {
-                DataSourceBuilder dataSourceBuilder =
-                        new DataSourceBuilder().setType(DataSourceType.ACCELEROMETER);
-                dataSourceClientRegister = datakitapi.register(dataSourceBuilder);
+            else if (regDataSourceClient == null) {
+                regDataSourceClient = datakitapi.register(buildDataSource());
                 regButton.setText(R.string.unregister_button);
-                printMessage(dataSourceClientRegister.getDataSource().getType() +
+                printMessage(regDataSourceClient.getDataSource().getType() +
                         " registration successful", output);
             } else {
-                unregisterListener();
-                datakitapi.unregister(dataSourceClientRegister);
-                dataSourceClientRegister = null;
-                regButton.setText(R.string.register_button);
-                printMessage("DataSource unregistered", output);
+                unregisterButton(false);
             }
         } catch (DataKitException ignored) {
-            unregisterListener();
-            dataSourceClientRegister = null;
-            regButton.setText(R.string.register_button);
-            printMessage(dataSourceClientRegister.getDataSource().getType() +
-                    " registration failed", output);
+            unregisterButton(true);
         }
     }
 
-    public void subscribeButton (View view){
-        datakitapi = datakitapi.getInstance(this);
+    /**
+     * Unregistering the sensor listener stops the data collection. Unsubscibing the data source removes
+     * any remaining callbacks. Then unregistering the data source from DataKit can be done. It is possible
+     * to unregister a subset of registered data sources, but <code>DataKitAPI.unregister()</code> only
+     * takes one <code>DataSourceClient</code> as a parameter so the method would need to be called
+     * individually for each data source.
+     * @param failed Whether this method was called because data source registration failed or not.
+     *               Only used for error message handling.
+     */
+    public void unregisterButton(boolean failed) {
         try {
-            if (dataSourceClientSubscribe == null) {
-                Application application =
-                        new ApplicationBuilder().setId(MainActivity.this.getPackageName()).build();
-                DataSourceBuilder dataSourceBuilder =
-                        new DataSourceBuilder().setType(DataSourceType.ACCELEROMETER).setApplication(application);
-                ArrayList<DataSourceClient> dataSourceClients = datakitapi.find(dataSourceBuilder);
+            unregisterListener();
+            unsubscribeDataSource();
+            datakitapi.unregister(regDataSourceClient);
+            regDataSourceClient = null;
+            regButton.setText(R.string.register_button);
+
+        } catch (DataKitException ignored){}
+        if (failed)
+            printMessage(regDataSourceClient.getDataSource().getType() +
+                    " registration failed", output);
+        else
+            printMessage(R.string.dataSourceUnregistered, output);
+    }
+
+    /**
+     * Unregisters the sensor listener. To pass <code>this</code> as the sensor listener, the class
+     * must implement <code>SensorEventListener</code>.
+     */
+    public void unregisterListener() {
+        mSensorManager.unregisterListener(this, mSensor);
+        insButton.setText(R.string.insert_button);
+        insOutput.setText("");
+    }
+
+    /**
+     * Subscribing a data source registers a callback interface that returns the data received by
+     * the database. In this implementation <code>dataSourceClients</code> only has one node because
+     * the only sensor that is registered is the accelerometer. In production the resulting arraylist
+     * is likely to have many more nodes.
+     * @param view subButton
+     */
+    public void subscribeButton (View view){
+        ArrayList<DataSourceClient> dataSourceClients;
+        try {
+            if (subDataSourceClient == null) {
+                dataSourceClients = datakitapi.find(buildDataSource(buildApplication()));
                 if(dataSourceClients.size() == 0) {
-                    printMessage("DataSource not registered yet", output);
+                    printMessage(R.string.errorNotRegistered, output);
                 } else {
-                    dataSourceClientSubscribe = dataSourceClients.get(0);
-                    datakitapi.subscribe(dataSourceClientSubscribe, new OnReceiveListener() {
-                        @Override
-                        public void onReceived(DataType dataType) {
-                            dataTypeSubscribe = (DataTypeDoubleArray) dataType;
-                            double[] sample = dataTypeSubscribe.getSample();
-                            printMessage("[" + sample[0] + ", " + sample[1] + ", " + sample[2] + "]", output);
-                        }
-                    });
+                    subDataSourceClient = dataSourceClients.get(0);
+                    // gets index 0 because there should only be one in this application
+                    datakitapi.subscribe(subDataSourceClient, subscribeListener);
                     subButton.setText(R.string.unsubscribe_button);
-                    printMessage("DataSource subscribed", output);
+                    printMessage(R.string.dataSourceSubscribed, output);
                 }
             } else {
                 unsubscribeDataSource();
             }
         } catch (DataKitException ignored) {
             subButton.setText(R.string.subscribe_button);
-            dataSourceClientSubscribe = null;
-            dataTypeSubscribe = null;
+            subDataSourceClient = null;
         }
     }
 
+    /**
+     * <code>OnReceiveListener</code> used for subscription. This demo application simply prints the
+     * data to an output text view.
+     */
+    public OnReceiveListener subscribeListener = new OnReceiveListener() {
+        @Override
+        public void onReceived(DataType dataType) {
+            printSample((DataTypeDoubleArray) dataType, output);
+        }
+    };
+
+    /**
+     * Unsubscribing a data source only unregisters the callback interface. Data is still collected
+     * and inserted. Nullifying the associated <code>DataSourceClient</code> variable prevents conflicts
+     * if the data source is subscribed again.
+     */
+    public void unsubscribeDataSource() {
+        try {
+            datakitapi.unsubscribe(subDataSourceClient);
+            subDataSourceClient = null;
+            subButton.setText(R.string.subscribe_button);
+            printMessage(R.string.dataSourceUnsubscribed, output);
+        } catch (DataKitException ignored) {}
+    }
+
+    /**
+     * In this implementation, pressing the insert button only registers the sensor listener. All data
+     * collection occurs in the overridden <code>onSensorChanged()</code> method.
+     * @param view insButton
+     */
     public void insertButton (View view){
-        datakitapi = datakitapi.getInstance(this);
-        if(dataSourceClientRegister != null) {
+        if(regDataSourceClient != null) {
             mSensorManager.registerListener(this, mSensor, SensorManager.SENSOR_DELAY_NORMAL);
             insButton.setText(R.string.inserting);
         } else {
-            printMessage("DataSource not registered yet.", output);
+            printMessage(R.string.errorNotRegistered, output);
         }
     }
 
+    /**
+     * To limit the frequency of samples a minimum sample time of 100 milliseconds. The accelerometer
+     * values are adjusted for gravity and passed into a new <code>DataTypeDoubleArray</code>. An appropriate
+     * <code>DataType</code> for the sensor should be used. For example, motion sensors should use
+     * <code>DataTypeDoubleArray</code> because they return an array of double values. The proximity
+     * sensor and other environmental sensors should use <code>DataTypeDouble</code>, as they return
+     * an array with only one value.
+     * @param event Value of the new accelerometer data.
+     */
     @Override
     public void onSensorChanged(SensorEvent event) {
         long curTime = DateTime.getDateTime();
@@ -210,67 +343,137 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             samples[1] = event.values[1] / GRAVITY; // Y axis
             samples[2] = event.values[2] / GRAVITY; // Z axis
             dataTypeDoubleArray = new DataTypeDoubleArray(curTime, samples);
-            insertData(dataTypeDoubleArray);
+            if (isHF)
+                insertHFData(dataTypeDoubleArray);
+            else
+                insertData(dataTypeDoubleArray);
         }
     }
 
+    /**
+     * Data is inserted into the database using the associated <code>DataSourceClient</code>, which
+     * provides relevant metadata, and the data sample itself. This demo also displays the data that
+     * is inserted, but that is not necessary. The standard insertion method adds rows to a database
+     * that is stored in <code>Android/Data/org.md2k.datakit/files/database.db</code> by default.
+     * Using <code>insertHighFrequency()</code> is recommended for sensors that produce a lot of data,
+     * such as the accelerometer, to help manage the size of the database.
+     * @param data Data to insert into the database
+     */
     public void insertData(DataTypeDoubleArray data) {
         try {
-            datakitapi.insert(dataSourceClientRegister, data);
-            double[] sample = data.getSample();
-            printMessage("[" + sample[0] + ", " + sample[1] + ", " + sample[2] + "]", insOutput);
-        } catch (DataKitException ignored){
+            datakitapi.insert(regDataSourceClient, data);
+            printSample(data, insOutput);
+        } catch (DataKitException ignored) {
             Log.e("database insert", ignored.getMessage());
+        }
+    }
+
+    /**
+     * Data is passed to <code>insertHighFrequency()</code> similarly to <code>insert()</code>. The
+     * difference is that the high frequency data is stored in a gzipped csv file that is stored in
+     * <code>Android/Data/org.md2k.datakit/files/raw/</code> by default. Recording the data in this
+     * way helps reduce the amount of resources DataKit requires.
+     * @param data Data to record.
+     */
+    public void insertHFData(DataTypeDoubleArray data) {
+        try {
+            datakitapi.insertHighFrequency(regDataSourceClient, data);
+            printSample(data, insOutput);
+        } catch (DataKitException ignored) {
+            Log.e("hf data insert", ignored.getMessage());
         }
     }
 
     @Override
     public void onAccuracyChanged(Sensor sensor, int x) {}
 
+    /**
+     * The data source must be unsubscribed here because the query result and the received data are
+     * printed in the same text view. This may not be necessary in a different implementation.
+     * This demo application only shows one query method. In this example, an arraylist of
+     * <code>DataSourceClient</code>s matching the desired data source is produced using the
+     * <code>DataKitAPI.find()</code> method. <code>DataKitAPI.find()</code> takes a
+     * <code>DataSourceBuilder</code> object as a parameter. This <code>DataSourceBuilder</code> can
+     * be configured for a particular data source or application. The query call is performed by passing
+     * a <code>DataSourceClient</code> and an integer representing the "last n samples" that were collected.
+     * Using this query method returns the last n rows matching the given data source in the database,
+     * where n is the number of samples to return.
+     * Other query methods allow queries for a given time window:
+     * <code>DataKitAPI.query(DataSourceClient dataSourceClient, long starttimestamp, long endtimestamp)</code>
+     * Or querying via primary key, where lastSyncedKey is the primary key and limit is the number of
+     * rows to return:
+     * <code>queryFromPrimaryKey(DataSourceClient dataSourceClient, long lastSyncedKey, int limit)</code>
+     *
+     * All <code>DataKitAPI.query()</code> methods return an arraylist of <code>DataType</code> objects.
+     * <code>DataKitAPI.queryFromPrimaryKey</code> returns an arraylist of <code>RowObject</code>s.
+     *
+     * Another useful method demonstrated here is <code>DataKitAPI.querySize()</code> which returns
+     * the number of rows in the database as a <code>DataTypeLong</code> object.
+     * @param view queButton
+     */
     public void queryButton (View view){
-        datakitapi = datakitapi.getInstance(this);
-        unsubscribeDataSource();
+        unsubscribeDataSource(); // Without this it was crashing
         try {
-            Application application =
-                    new ApplicationBuilder().setId(MainActivity.this.getPackageName()).build();
-            DataSourceBuilder dataSourceBuilder =
-                    new DataSourceBuilder().setType(DataSourceType.ACCELEROMETER).setApplication(application);
-            ArrayList<DataSourceClient> dataSourceClients = datakitapi.find(dataSourceBuilder);
-            if(dataSourceClients.size() == 0) {
-                printMessage("DataSource not registered yet.", output);
+            ArrayList<DataSourceClient> dataSourceClients = datakitapi.find(buildDataSource(buildApplication()));
+            if (dataSourceClients.size() == 0) {
+                printMessage(R.string.errorNotRegistered, output);
             } else {
+                querySize = datakitapi.querySize();
                 dataTypeQuery = datakitapi.query(dataSourceClients.get(0), 3);
-                String message = "[X axis, Y axis, Z axis]\n";
-                for (DataType data : dataTypeQuery) {
-                    if (data instanceof DataTypeDoubleArray) {
-                        DataTypeDoubleArray dataArray = (DataTypeDoubleArray)data;
-                        double[] sample = dataArray.getSample();
-                        message += "[" + sample[0] + ", " + sample[1] + ", " + sample[2] + "]\n";
-                    }
-                }
-                printMessage(message, output);
+                if (dataTypeQuery.size() == 0) {
+                    printMessage("query size zero", output);
+                } else
+                    printQuery(dataTypeQuery);
             }
         } catch (DataKitException ignored) {
+            Log.e("query", ignored.getMessage());
             dataTypeQuery = null;
         }
     }
 
-    public void unregisterListener() {
-        mSensorManager.unregisterListener(this, mSensor);
-        insButton.setText(R.string.insert_button);
-        insOutput.setText("");
+    /**
+     * This is an example of how a query result might be printed.
+     * @param query Query result
+     */
+    public void printQuery (ArrayList<DataType> query) {
+        StringBuilder message = new StringBuilder();
+        message.append("Query Size is ").append(querySize.getSample()).append("\n");
+        message.append("[X axis, Y axis, Z axis]\n");
+        for (DataType data : query) {
+            if (data instanceof DataTypeDoubleArray) {
+                DataTypeDoubleArray dataArray = (DataTypeDoubleArray)data;
+                double[] sample = dataArray.getSample();
+                message.append("[" + sample[0] + ", " + sample[1] + ", " + sample[2] + "]\n");
+            }
+        }
+        printMessage(message.toString(), output);
     }
 
-    public void unsubscribeDataSource() {
-        try {
-            datakitapi.unsubscribe(dataSourceClientSubscribe);
-            dataSourceClientSubscribe = null;
-            dataTypeSubscribe = null;
-            subButton.setText(R.string.subscribe_button);
-            printMessage("DataSource unsubscribed", output);
-        } catch (DataKitException ignored) {}
+    /**
+     * Prints a data sample. Used for displaying inserted data and data received when a data source
+     * is subscribed.
+     * @param data Data sample to print.
+     * @param output TextView to print to.
+     */
+    public void printSample(DataTypeDoubleArray data, TextView output) {
+        double[] sample = data.getSample();
+        printMessage("[" + sample[0] + ", " + sample[1] + ", " + sample[2] + "]", output);
     }
 
+    /**
+     * Prints a message defined in the application resources.
+     * @param message Message to print. Should be a resource defined in <code>R.strings</code>.
+     * @param output TextView to print to.
+     */
+    public void printMessage (int message, TextView output) {
+        output.setText(message);
+    }
+
+    /**
+     * Prints the string passed to it.
+     * @param message Message to print.
+     * @param output TextView to print to.
+     */
     public void printMessage (String message, TextView output) {
         output.setText(message);
     }
