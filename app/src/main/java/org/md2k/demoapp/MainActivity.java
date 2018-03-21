@@ -388,6 +388,8 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     public void onAccuracyChanged(Sensor sensor, int x) {}
 
     /**
+     * Queries the database for data matching the given data source and parameters.
+     *
      * The data source must be unsubscribed here because the query result and the received data are
      * printed in the same text view. This may not be necessary in a different implementation.
      * This demo application only shows one query method. In this example, an arraylist of
@@ -398,17 +400,20 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
      * a <code>DataSourceClient</code> and an integer representing the "last n samples" that were collected.
      * Using this query method returns the last n rows matching the given data source in the database,
      * where n is the number of samples to return.
+     * <p>
      * Other query methods allow queries for a given time window:
-     * <code>DataKitAPI.query(DataSourceClient dataSourceClient, long starttimestamp, long endtimestamp)</code>
+     * <p><code>DataKitAPI.query(DataSourceClient dataSourceClient, long starttimestamp, long endtimestamp)</code></p>
      * Or querying via primary key, where lastSyncedKey is the primary key and limit is the number of
      * rows to return:
-     * <code>queryFromPrimaryKey(DataSourceClient dataSourceClient, long lastSyncedKey, int limit)</code>
-     *
+     * <p><code>queryFromPrimaryKey(DataSourceClient dataSourceClient, long lastSyncedKey, int limit)</code></p>
+     * </p>
      * All <code>DataKitAPI.query()</code> methods return an arraylist of <code>DataType</code> objects.
      * <code>DataKitAPI.queryFromPrimaryKey</code> returns an arraylist of <code>RowObject</code>s.
      *
+     * <p>
      * Another useful method demonstrated here is <code>DataKitAPI.querySize()</code> which returns
      * the number of rows in the database as a <code>DataTypeLong</code> object.
+     * </p>
      * @param view queButton
      */
     public void queryButton (View view){
