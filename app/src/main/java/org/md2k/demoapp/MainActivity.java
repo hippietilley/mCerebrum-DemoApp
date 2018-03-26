@@ -157,7 +157,6 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
      */
     public void setHFSwitch(View view) {
         isHF = hfSwitch.isChecked();
-        printMessage(isHF.toString(), output);
     }
 
     /**
