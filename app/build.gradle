@@ -32,5 +32,5 @@ dependencies {
 
     // Local project dependencies
     releaseImplementation project(':datakitapi')
-    compile project(path: ':datakitapi')
+    implementation project(path: ':datakitapi')
 }

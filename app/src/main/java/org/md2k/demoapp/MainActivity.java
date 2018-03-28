@@ -59,7 +59,7 @@ import org.md2k.datakitapi.source.datasource.DataSourceType;
 import org.md2k.datakitapi.time.DateTime;
 
 /**
- * This application demonstrates how DataKit can be implemented and used.
+ * This application demonstrates how to connect to and make API calls against DataKit via DataKitAPI.
  */
 public class MainActivity extends AppCompatActivity implements SensorEventListener {
 
@@ -85,7 +85,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private TextView subButton;
     private TextView insButton;
     private TextView output;
-    private TextView insOutput;
+    private TextView subOutput;
     private Switch hfSwitch;
 
     /**
@@ -105,7 +105,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         subButton = findViewById(R.id.subButton);
         insButton = findViewById(R.id.insButton);
         output = findViewById(R.id.outputTextView);
-        insOutput = findViewById(R.id.insertTextView);
+        subOutput = findViewById(R.id.subTextView);
         hfSwitch = findViewById(R.id.hfSwitch);
         isHF = hfSwitch.isChecked();
 
@@ -178,7 +178,9 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                     conButton.setText(R.string.disconnect_button);
                 }
             });
-        } catch (DataKitException ignored) {}
+        } catch (DataKitException ignored) {
+            printMessage(ignored.getMessage(), output);
+        }
     }
 
     /**
@@ -216,6 +218,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             }
         } catch (DataKitException ignored) {
             unregisterButton(true);
+            printMessage(ignored.getMessage(), output);
         }
     }
 
@@ -236,7 +239,9 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             regDataSourceClient = null;
             regButton.setText(R.string.register_button);
 
-        } catch (DataKitException ignored){}
+        } catch (DataKitException ignored){
+            printMessage(ignored.getMessage(), output);
+        }
         if (failed)
             printMessage(regDataSourceClient.getDataSource().getType() +
                     " registration failed", output);
@@ -251,7 +256,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     public void unregisterListener() {
         mSensorManager.unregisterListener(this, mSensor);
         insButton.setText(R.string.insert_button);
-        insOutput.setText("");
+        subOutput.setText("");
     }
 
     /**
@@ -281,17 +286,18 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         } catch (DataKitException ignored) {
             subButton.setText(R.string.subscribe_button);
             subDataSourceClient = null;
+            printMessage(ignored.getMessage(), output);
         }
     }
 
     /**
-     * <code>OnReceiveListener</code> used for subscription. This demo application simply prints the
+     * <code>OnReceiveListener</code> used for subscription. This demo application simply displays the
      * data to an output text view.
      */
     public OnReceiveListener subscribeListener = new OnReceiveListener() {
         @Override
         public void onReceived(DataType dataType) {
-            printSample((DataTypeDoubleArray) dataType, output);
+            printSample((DataTypeDoubleArray) dataType, subOutput);
         }
     };
 
@@ -306,7 +312,9 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             subDataSourceClient = null;
             subButton.setText(R.string.subscribe_button);
             printMessage(R.string.dataSourceUnsubscribed, output);
-        } catch (DataKitException ignored) {}
+        } catch (DataKitException ignored) {
+            printMessage(ignored.getMessage(), output);
+        }
     }
 
     /**
@@ -325,11 +333,11 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
     /**
      * To limit the frequency of samples a minimum sample time of 100 milliseconds. The accelerometer
-     * values are adjusted for gravity and passed into a new <code>DataTypeDoubleArray</code>. An appropriate
-     * <code>DataType</code> for the sensor should be used. For example, motion sensors should use
-     * <code>DataTypeDoubleArray</code> because they return an array of double values. The proximity
-     * sensor and other environmental sensors should use <code>DataTypeDouble</code>, as they return
-     * an array with only one value.
+     * is sampled at 10 hertz and is adjusted for gravity before being passed into a new
+     * <code>DataTypeDoubleArray</code>. An appropriate <code>DataType</code> for the sensor should
+     * be used. For example, motion sensors should use <code>DataTypeDoubleArray</code> because they
+     * return an array of double values. The proximity sensor and other environmental sensors should
+     * use <code>DataTypeDouble</code>, as they return an array with only one value.
      * @param event Value of the new accelerometer data.
      */
     @Override
@@ -361,9 +369,9 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     public void insertData(DataTypeDoubleArray data) {
         try {
             datakitapi.insert(regDataSourceClient, data);
-            printSample(data, insOutput);
         } catch (DataKitException ignored) {
             Log.e("database insert", ignored.getMessage());
+            printMessage(ignored.getMessage(), output);
         }
     }
 
@@ -377,9 +385,10 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     public void insertHFData(DataTypeDoubleArray data) {
         try {
             datakitapi.insertHighFrequency(regDataSourceClient, data);
-            printSample(data, insOutput);
+            printSample(data, subOutput);
         } catch (DataKitException ignored) {
             Log.e("hf data insert", ignored.getMessage());
+            printMessage(ignored.getMessage(), output);
         }
     }
 
@@ -416,7 +425,6 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
      * @param view queButton
      */
     public void queryButton (View view){
-        unsubscribeDataSource(); // Without this it was crashing
         try {
             ArrayList<DataSourceClient> dataSourceClients = datakitapi.find(buildDataSource(buildApplication()));
             if (dataSourceClients.size() == 0) {
@@ -432,6 +440,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         } catch (DataKitException ignored) {
             Log.e("query", ignored.getMessage());
             dataTypeQuery = null;
+            printMessage(ignored.getMessage(), output);
         }
     }
 

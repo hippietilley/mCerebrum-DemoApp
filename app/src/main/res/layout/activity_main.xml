@@ -8,8 +8,8 @@
 
     <Button
         android:id="@+id/conButton"
-        android:layout_width="328dp"
-        android:layout_height="44dp"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
         android:onClick="connectButton"
         android:text="@string/connect_button"
         app:layout_constraintBottom_toTopOf="@+id/regButton"
@@ -19,8 +19,8 @@
 
     <Button
         android:id="@+id/regButton"
-        android:layout_width="328dp"
-        android:layout_height="44dp"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
         android:onClick="registerButton"
         android:text="@string/register_button"
         app:layout_constraintBottom_toTopOf="@+id/subButton"
@@ -32,8 +32,8 @@
 
     <Button
         android:id="@+id/subButton"
-        android:layout_width="328dp"
-        android:layout_height="44dp"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
         android:onClick="subscribeButton"
         android:text="@string/subscribe_button"
         app:layout_constraintBottom_toTopOf="@+id/insButton"
@@ -45,8 +45,8 @@
 
     <Button
         android:id="@+id/insButton"
-        android:layout_width="328dp"
-        android:layout_height="44dp"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
         android:onClick="insertButton"
         android:text="@string/insert_button"
         app:layout_constraintBottom_toTopOf="@+id/hfSwitch"
@@ -58,8 +58,8 @@
 
     <Switch
         android:id="@+id/hfSwitch"
-        android:layout_width="328dp"
-        android:layout_height="44dp"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
         android:layout_marginLeft="16dp"
         android:onClick="setHFSwitch"
         android:text="@string/hfSwitchOff"
@@ -67,14 +67,15 @@
         android:textColorLink="@color/colorAccent"
         android:textOff="@string/hfSwitchOff"
         android:textOn="@string/hfSwitchOn"
-        app:layout_constraintBottom_toTopOf="@id/insertTextView"
+        app:layout_constraintBottom_toTopOf="@id/subTextView"
         app:layout_constraintLeft_toLeftOf="parent"
         app:layout_constraintTop_toBottomOf="@id/insButton" />
 
     <TextView
-        android:id="@+id/insertTextView"
-        android:layout_width="329dp"
-        android:layout_height="70dp"
+        android:id="@+id/subTextView"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:minHeight="49dp"
         android:textAlignment="center"
         android:textAppearance="@android:style/TextAppearance.DeviceDefault"
         app:layout_constraintBottom_toTopOf="@+id/queButton"
@@ -85,20 +86,21 @@
 
     <Button
         android:id="@+id/queButton"
-        android:layout_width="328dp"
-        android:layout_height="44dp"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
         android:onClick="queryButton"
         android:text="@string/query_button"
         app:layout_constraintBottom_toTopOf="@+id/outputTextView"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintHorizontal_bias="0.5"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/insertTextView" />
+        app:layout_constraintTop_toBottomOf="@+id/subTextView" />
 
     <TextView
         android:id="@+id/outputTextView"
-        android:layout_width="328dp"
-        android:layout_height="131dp"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:minHeight="212dp"
         android:layout_marginBottom="8dp"
         android:textAlignment="center"
         android:textAppearance="@android:style/TextAppearance.DeviceDefault"
