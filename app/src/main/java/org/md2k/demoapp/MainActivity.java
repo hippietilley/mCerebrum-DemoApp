@@ -238,7 +238,6 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             datakitapi.unregister(regDataSourceClient);
             regDataSourceClient = null;
             regButton.setText(R.string.register_button);
-
         } catch (DataKitException ignored){
             printMessage(ignored.getMessage(), output);
         }
@@ -398,8 +397,6 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     /**
      * Queries the database for data matching the given data source and parameters.
      *
-     * The data source must be unsubscribed here because the query result and the received data are
-     * printed in the same text view. This may not be necessary in a different implementation.
      * This demo application only shows one query method. In this example, an arraylist of
      * <code>DataSourceClient</code>s matching the desired data source is produced using the
      * <code>DataKitAPI.find()</code> method. <code>DataKitAPI.find()</code> takes a
